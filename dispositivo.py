@@ -28,18 +28,8 @@ class Dispositivo:
         self.t2 = threading.Thread(target=self.definir_parametros)
         self.t3 = threading.Thread(target=self.enviar_temperatura)
 
-        self.t0.start()
+        #self.t0.start()
         self.t2.start()
-
-        '''
-        self.t1 = threading.Thread(target=self.definir_parametros)
-        self.t2 = threading.Thread(target=self.variar_temp)
-
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        
-        self.t1.start()
-        self.t2.start()
-        self.t2.join()'''
 
     def conexao(self):
         self.sockTCP.bind((TCP_IP, TCP_PORT))
@@ -73,24 +63,50 @@ class Dispositivo:
 
     def definir_parametros(self):
         while True:
-            self.temp = input("Digite a temperatura que voce quer definir: ")
-            self.ligado = input("Definir status 0 p/ Desligado, 1 p/ Ligado: ") == "1"
-            self.variar = self.ligado and (input("Variar temperatura? 0 p/ Não, 1 p/ Sim: ") == "1")
-
-    def variar_temp(self):
-        cont = 0
-        while self.variar:
-            r = random()
-            cont += 1
-            print(cont)
-            if (r > 0.99):
-                if (r > 0.995):
-                    self.temp += 0.1
-                else:
-                    self.temp -= 0.1
+            print("Escolha qual parâmetro deseja alterar:\n"
+                  "[0] Ligar\n"
+                  "[1] Desligar\n"
+                  "[2] Pausar\n"
+                  "[3] Alterar temperatura\n")
+            resp = input("Digite a opção desejada: ").strip()
+            while (resp not in ["0", "1", "2", "3"]):
+                print("Opção não reconhecida\n")
+                resp = input("Digite a opção desejada: ").strip()
             
-            if (cont > 1000):
-                self.t1.start()
+            if resp == "0":
+                if self.ligado:
+                    print("O dispositivo já está ligado.")
+                else:
+                    self.ligado = True
+                    print("Alterado o status do dispositivo para ligado.")
+            elif resp == "1":
+                if not self.ligado:
+                    print("O dispositivo já está desligado.")
+                else:
+                    self.ligado = False
+                    print("Alterado o status do dispositivo para desligado.")
+            elif resp == "2":
+                pausa = int(input("Digite o tempo em segundos de pausa: "))
+                print(f"O dispositivo não funcionará pelos próximos {pausa} segundos.")
+            else:
+                temp = float(input("Digite a nova temperatura: "))
+                self.variar_temp(temp)
+            
+
+    def variar_temp(self, novaTemp):
+        while self.temp != novaTemp:
+            if novaTemp > self.temp:
+                if (self.temp + 0.5) >= novaTemp:
+                    self.temp = novaTemp
+                else:
+                    self.temp += 0.5
+            else:
+                if (self.temp - 0.5) <= novaTemp:
+                    self.temp = novaTemp
+                else:
+                    self.temp -= 0.5
+            print(self.temp)
+            time.sleep(1) 
     
     def checar_comando(self):
         print("Recebi comandos?")
