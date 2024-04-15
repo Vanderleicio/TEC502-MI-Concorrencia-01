@@ -5,10 +5,10 @@ import socket
 
 
 UDP_IP = "192.168.15.8" # IP do Broker
-UDP_PORT = 5005
+UDP_PORT = 5006
 
 TCP_IP = "192.168.15.8" # IP do dispositivo
-TCP_PORT = 5004
+TCP_PORT = 5001
 
 class Dispositivo:
 
@@ -111,13 +111,6 @@ class Dispositivo:
                     self.temp -= 0.5
             print(self.temp)
             time.sleep(1) 
-    
-    def checar_comando(self):
-        print("Recebi comandos?")
-        time.sleep(1)
-
-    def enviar_dados(self):
-        print("Enviado")
 
 teste = Dispositivo()
 

@@ -9,6 +9,7 @@
 4. Recursos - Dispositivo'''
 import socket
 from flask import Flask, jsonify, request
+import threading
 
 app = Flask(__name__)
 
@@ -33,19 +34,37 @@ dispositivos = [
     }
 ]
 TCP_IP = "192.168.15.8" #IP do dispositivo
-TCP_PORT = 5004         #Porta que o dispositvo está escutando
+TCP_PORT = 5001         #Porta que o dispositvo está escutando
+CONECTADOTCP = False
+CONECTADOUDP = False
 
-sock = socket.socket(socket.AF_INET,
-                     socket.SOCK_STREAM)
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # Socket p/ enviar comandos
+
+sockUDP = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # Socket p/ receber dados 
+
 
 def main():
     print("Programa principal")
 
 def ler_dados():
-    print("Dados dos dispositivos")
+    global CONECTADOUDP
+    
+    if not CONECTADOUDP:
+        sockUDP.bind(("192.168.15.8", 5005))
+        CONECTADOUDP = True
+    
+    print("TESTE")
+    while True:
+        data, addr = sockUDP.recvfrom(1024)  # buffer size é 1024 bytes
+        print("Mensagem recebida:", data.decode())
+        print(addr)
 
 def enviar_comando(ip, comando):
-    sock.connect((ip, TCP_PORT))
+    global CONECTADOTCP
+    if not CONECTADOTCP:
+        sock.connect((ip, TCP_PORT))
+        CONECTADOTCP = True
+    
     msg = comando #Comando que vai ser enviado, 0 p/ Desligar, 1 p/ Ligar, 2 p/ Reiniciar e 3 p/ Temperatura atual
     sock.sendall(msg.encode())
     print(f"Enviando comando para o dispositivo {ip}")
@@ -54,7 +73,7 @@ def enviar_comando(ip, comando):
 def obter_dispositivos():
     return jsonify(dispositivos)
 
-@app.route('/dispositivos/<string:ip>', methods=['GET'])
+@app.route('/dispositivos/<int:id>', methods=['GET'])
 def obter_dispositivo_ip(id):
     for dispositivo in dispositivos:
         if (dispositivo.get('id') == id):
@@ -74,4 +93,8 @@ def editar_dispositivo(id):
 
             return jsonify(dispositivos[index])
 
+tConexao = threading.Thread(target=ler_dados)
+print("TESTE2")
+tConexao.start()
+print("TESTE1")
 app.run(port=5000, host='localhost', debug=True)
