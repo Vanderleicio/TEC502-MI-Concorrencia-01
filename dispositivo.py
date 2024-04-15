@@ -4,10 +4,10 @@ import time
 import socket
 
 
-UDP_IP = "192.168.15.3" # Colocar o IP do destino
+UDP_IP = "192.168.15.8" # IP do Broker
 UDP_PORT = 5005
 
-TCP_IP = "192.168.15.8" # Colocar o IP da fonte
+TCP_IP = "192.168.15.8" # IP do dispositivo
 TCP_PORT = 5004
 
 class Dispositivo:
@@ -23,13 +23,14 @@ class Dispositivo:
         #Socket para o envio de dados
         self.sockUDP = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-        self.t0 = threading.Thread(target=self.conexao)
-        self.t1 = threading.Thread(target=self.receber_comandos)
-        self.t2 = threading.Thread(target=self.definir_parametros)
-        self.t3 = threading.Thread(target=self.enviar_temperatura)
+        self.tConexao = threading.Thread(target=self.conexao)
+        self.tLerComandos = threading.Thread(target=self.receber_comandos)
+        self.tParametros = threading.Thread(target=self.definir_parametros)
+        self.tEnviar = threading.Thread(target=self.enviar_temperatura)
 
-        #self.t0.start()
-        self.t2.start()
+        self.tConexao.start()
+        self.tEnviar.start()
+        self.tParametros.start()
 
     def conexao(self):
         self.sockTCP.bind((TCP_IP, TCP_PORT))
@@ -40,7 +41,7 @@ class Dispositivo:
 
         self.conn, self.addr = self.sockTCP.accept()
         print("Conexão recebida de:", self.addr)
-        self.t1.start()
+        self.tLerComandos.start()
         
     def receber_comandos(self):
         while True:
@@ -48,17 +49,20 @@ class Dispositivo:
             if not comando:
                 break
             print("Comando recebido:", comando.decode())
-            if comando.decode() == "1":
-                print("Foi")
-                self.t3.start()
-
-
+            if comando.decode() == "0":
+                self.ligado = False
+            elif comando.decode() == "1":
+                self.ligado = True
+        self.tConexao.start()
 
     def enviar_temperatura(self):
-        msg = f"{self.temp}"
+        while True:
+            while self.ligado:
+                msg = f"{self.temp}"
 
-        self.sockUDP.sendto(msg.encode(), (UDP_IP, UDP_PORT))
-        print("Temperatura enviada.")
+                self.sockUDP.sendto(msg.encode(), (UDP_IP, UDP_PORT))
+                print("Temperatura enviada.")
+                time.sleep(2)
 
 
     def definir_parametros(self):
