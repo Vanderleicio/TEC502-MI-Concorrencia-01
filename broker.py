@@ -53,8 +53,9 @@ def ler_dados():
         sockUDP.bind(("192.168.15.8", 5005))
         CONECTADOUDP = True
     
-    print("TESTE")
+    print("Teste1")
     while True:
+        print("Teste2")
         data, addr = sockUDP.recvfrom(1024)  # buffer size é 1024 bytes
         print("Mensagem recebida:", data.decode())
         print(addr)
@@ -89,12 +90,10 @@ def editar_dispositivo(id):
 
         if dispositivo.get('id') == id:
             dispositivos[index].update(dispositivo_alterado)
+            tConexao.start()
             enviar_comando(dispositivo.get('ip'), comando)
 
             return jsonify(dispositivos[index])
 
 tConexao = threading.Thread(target=ler_dados)
-print("TESTE2")
-tConexao.start()
-print("TESTE1")
 app.run(port=5000, host='localhost', debug=True)

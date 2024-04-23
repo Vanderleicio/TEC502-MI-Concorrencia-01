@@ -71,9 +71,10 @@ class Dispositivo:
                   "[0] Ligar\n"
                   "[1] Desligar\n"
                   "[2] Pausar\n"
-                  "[3] Alterar temperatura\n")
+                  "[3] Alterar temperatura\n"
+                  "[4] Finalizar programa\n")
             resp = input("Digite a opção desejada: ").strip()
-            while (resp not in ["0", "1", "2", "3"]):
+            while (resp not in ["0", "1", "2", "3", "4"]):
                 print("Opção não reconhecida\n")
                 resp = input("Digite a opção desejada: ").strip()
             
@@ -92,9 +93,13 @@ class Dispositivo:
             elif resp == "2":
                 pausa = int(input("Digite o tempo em segundos de pausa: "))
                 print(f"O dispositivo não funcionará pelos próximos {pausa} segundos.")
-            else:
+            elif resp == "3":
                 temp = float(input("Digite a nova temperatura: "))
                 self.variar_temp(temp)
+            else:
+                print("Desligando")
+                self.sockTCP.close()
+                self.sockUDP.close()
             
 
     def variar_temp(self, novaTemp):
