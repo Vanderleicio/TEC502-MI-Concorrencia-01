@@ -4,13 +4,11 @@ import time
 import socket
 
 # Mensagens TCP: {Comando: nº do comando, Confirmacao: Bool}
-# Mensagens UDP: {Tipo: [temp, status, conexao], Dado: [Float, Bool, 0]}
+# Mensagens UDP: {Tipo: [temp, status], Dado: [Float, Bool]}
 
-UDP_IP = "192.168.15.5" # IP do Broker
-UDP_PORT = 15009
-
-TCP_IP = "192.168.15.5" # IP do dispositivo
-TCP_PORT = 5001
+BROKER_IP = "192.168.15.5" # IP do Broker
+BROKER_UDP_PORT = 15009
+BROKER_TCP_PORT = 5001
 
 class Dispositivo:
 
@@ -34,45 +32,36 @@ class Dispositivo:
         self.tParametros.start()
 
     def conexao(self):
-        msg = "{'Tipo': 'conexao', 'Dado': 0}"
-
-        self.sockUDP.sendto(msg.encode(), (UDP_IP, UDP_PORT))
-        print("Pedido de conexão enviado")
-
-
-        self.sockTCP.bind((TCP_IP, TCP_PORT))
-
-        self.sockTCP.listen(1)
-
-        print("Aguardando por conexões...")
-
-        self.conn, self.addr = self.sockTCP.accept()
-        print("Conexão recebida de:", self.addr)
+        # Solicita uma conexão com o Broker p/ adicionar o dispositivo na lista de dispositivos
+        self.sockTCP.connect((BROKER_IP, BROKER_TCP_PORT))
         self.tLerComandos.start()
+
         
     def receber_comandos(self):
         while True:
-            comando = self.conn.recv(1024)  # buffer size é 1024 bytes
+            comando = self.sockTCP.recv(1024)  # buffer size é 1024 bytes
             if not comando:
+                print("Breakou 1")
                 break
             print("Comando recebido:", comando.decode())
             msg = eval(comando.decode())
             cmd = msg.get('Comando')
-            if cmd == "0":
+            if cmd == 0:
                 self.ligado = False
-            elif cmd == "1":
+            elif cmd == 1:
                 self.ligado = True
-            elif cmd == "2":
+            elif cmd == 2:
                 self.enviar_temperatura()
-            elif cmd == "3":
+            elif cmd == 3:
                 self.enviar_status()
-        self.tConexao.start()
+            elif cmd == 4:
+                self.id = msg.get('Confirmacao')
 
     def enviar_status(self):
         msg = {'Tipo': 'status', 'Dado': self.ligado}
         msg = str(msg)
 
-        self.sockUDP.sendto(msg.encode(), (UDP_IP, UDP_PORT))
+        self.sockUDP.sendto(msg.encode(), (BROKER_IP, BROKER_UDP_PORT))
         print("Status enviado.")
 
     def enviar_temperatura(self):
@@ -80,7 +69,7 @@ class Dispositivo:
             msg = {'Tipo': 'temp', 'Dado': self.temp}
             msg = str(msg)
 
-            self.sockUDP.sendto(msg.encode(), (UDP_IP, UDP_PORT))
+            self.sockUDP.sendto(msg.encode(), (BROKER_IP, BROKER_UDP_PORT))
             print("Temperatura enviada.")
 
 
