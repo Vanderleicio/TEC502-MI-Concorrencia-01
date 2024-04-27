@@ -9,7 +9,7 @@
 4. Recursos - Dispositivo'''
 
 # Mensagens TCP: {Comando: nº do comando, Confirmacao: Bool}
-# Mensagens UDP: {Tipo: [temp, status, conexao], Dado: [Float, Bool, 0]}
+# Mensagens UDP: {Id: int, Tipo: [temp, status, conexao], Dado: [Float, Bool, 0]}
 import socket
 from flask import Flask, jsonify, request
 import threading
@@ -52,12 +52,12 @@ def ler_dados():
         
         if (msg.get('Tipo') == 'status'):
             for dispositivo in dispositivos:
-                if (dispositivo.get('ip') == addr[0]):
+                if (dispositivo.get('id') == msg.get('Id')):
                     dispositivo['ligado'] = msg['Dado']
 
         elif (msg.get('Tipo') == 'temp'):
             for dispositivo in dispositivos:
-                if (dispositivo.get('ip') == addr[0]):
+                if (dispositivo.get('id') == msg.get('Id')):
                     dispositivo['temperatura'] = msg['Dado']
         else:
             print("Tipo não reconhecido")

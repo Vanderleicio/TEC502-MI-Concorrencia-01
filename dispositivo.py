@@ -4,7 +4,7 @@ import time
 import socket
 
 # Mensagens TCP: {Comando: nº do comando, Confirmacao: Bool}
-# Mensagens UDP: {Tipo: [temp, status], Dado: [Float, Bool]}
+# Mensagens UDP: {Id: int, Tipo: [temp, status], Dado: [Float, Bool]}
 
 BROKER_IP = "192.168.15.5" # IP do Broker
 BROKER_UDP_PORT = 15009
@@ -58,7 +58,7 @@ class Dispositivo:
                 self.id = msg.get('Confirmacao')
 
     def enviar_status(self):
-        msg = {'Tipo': 'status', 'Dado': self.ligado}
+        msg = {'Id': self.id, 'Tipo': 'status', 'Dado': self.ligado}
         msg = str(msg)
 
         self.sockUDP.sendto(msg.encode(), (BROKER_IP, BROKER_UDP_PORT))
@@ -66,7 +66,7 @@ class Dispositivo:
 
     def enviar_temperatura(self):
         if self.ligado:
-            msg = {'Tipo': 'temp', 'Dado': self.temp}
+            msg = {'Id': self.id, 'Tipo': 'temp', 'Dado': self.temp}
             msg = str(msg)
 
             self.sockUDP.sendto(msg.encode(), (BROKER_IP, BROKER_UDP_PORT))
@@ -125,7 +125,8 @@ class Dispositivo:
             print(self.temp)
             time.sleep(1) 
 
-dispositivo = Dispositivo()
+dispositivo1 = Dispositivo()
+dispositivo2 = Dispositivo()
 
 
 '''========================================================================='''
