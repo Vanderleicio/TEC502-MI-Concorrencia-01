@@ -33,6 +33,7 @@ class Dispositivo:
 
     def conexao(self):
         # Solicita uma conexão com o Broker p/ adicionar o dispositivo na lista de dispositivos
+        print("Conectando")
         self.sockTCP.connect((BROKER_IP, BROKER_TCP_PORT))
         self.tLerComandos.start()
 
@@ -92,18 +93,22 @@ class Dispositivo:
                 else:
                     self.ligado = True
                     print("Alterado o status do dispositivo para ligado.")
+                self.enviar_status()
             elif resp == "1":
                 if not self.ligado:
                     print("O dispositivo já está desligado.")
                 else:
                     self.ligado = False
                     print("Alterado o status do dispositivo para desligado.")
+                self.enviar_status()
             elif resp == "2":
                 pausa = int(input("Digite o tempo em segundos de pausa: "))
                 print(f"O dispositivo não funcionará pelos próximos {pausa} segundos.")
             elif resp == "3":
                 temp = float(input("Digite a nova temperatura: "))
-                self.variar_temp(temp)
+                #self.variar_temp(temp)
+                self.temp = temp
+                self.enviar_temperatura()
             else:
                 print("Desligando")
                 self.sockTCP.close()
@@ -126,7 +131,6 @@ class Dispositivo:
             time.sleep(1) 
 
 dispositivo1 = Dispositivo()
-dispositivo2 = Dispositivo()
 
 
 '''========================================================================='''

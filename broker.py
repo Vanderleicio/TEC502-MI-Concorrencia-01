@@ -34,18 +34,20 @@ def main():
     sockUDP.bind((BROKER_IP, UDP_PORT)) # Conecta o servidor para escutar transmissões UDP
     sockTCP.bind((BROKER_IP, TCP_PORT)) # Conecta o servidor para enviar transmissões TCP
     tDados.start()
-    esperar_conexao()
+    tConexoes.start()
     
 
 def esperar_conexao():
-    sockTCP.listen(1)
+    while True:
+        sockTCP.listen(1)
 
-    conn, addr = sockTCP.accept()
-    conectar_novo_dispositivo(addr, conn)
+        conn, addr = sockTCP.accept()
+        conectar_novo_dispositivo(addr, conn)
 
 def ler_dados():
     
     while True:
+        print("Esperando msgs")
         data, addr = sockUDP.recvfrom(1024)  # buffer size é 1024 bytes
         msg = eval(data.decode())
 
@@ -118,7 +120,6 @@ def obter_dispositivo_status(id):
 
 def editar_dispositivo(id):
     dispositivo_alterado = request.get_json()
-
     comando = 1 if dispositivo_alterado.get('ligado') else 0 #Comando "1" se for p/ ligar o dispositivo e "0" p/ desligar
 
     for index, dispositivo in enumerate(dispositivos):
@@ -126,11 +127,14 @@ def editar_dispositivo(id):
         if dispositivo.get('id') == id:
             dispositivos[index]['ligado'] = dispositivo_alterado.get('ligado')
             enviar_comando(comando, id)
+            enviar_comando(2, id)
+            sleep(0.1) #VER COMO CONSERTAR ISSO!
 
             return jsonify(dispositivos[index])
 
 tDados = threading.Thread(target=ler_dados)
 tMain = threading.Thread(target=main)
+tConexoes = threading.Thread(target=esperar_conexao)
 
 if __name__ == '__main__':
     tMain.start()
