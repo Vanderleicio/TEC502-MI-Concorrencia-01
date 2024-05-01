@@ -17,22 +17,27 @@ def ligar_dispositivo():
     item = treeview.selection()
     if item:
         item_values = treeview.item(item, "values")
+        treeview.item(item, values=(item_values[0], item_values[1], "Desligando..." if (item_values[2] == 'Ligado') else "Ligando..."))
         idDisp = item_values[0]
         status = item_values[2] == 'Ligado'
-        continuar = True
-        while continuar:
-            route = 'http://localhost:5000/dispositivos/' + idDisp
-            corpo = {'id': idDisp, 'ip': '', 'temperatura': '', 'ligado': not status}
-            resposta = requests.put(route, json=corpo)
-            resp = resposta.json()
-            continuar = resp.get('ligado') == status #Continua solicitando p/ garantir que o pedido foi atendido
+        route = 'http://localhost:5000/dispositivos/' + idDisp
+        corpo = {'id': idDisp, 'ip': '', 'temperatura': '', 'ligado': not status}
+        resposta = requests.put(route, json=corpo)
+
         
 
 def atualizar_lista():
     global dispositivos
     while True:
-        print('atualizou')
-        dados_da_solicitacao = requests.get("http://localhost:5000/dispositivos").json()
+        conectado = False
+
+        while not conectado:
+            try:
+                dados_da_solicitacao = requests.get("http://localhost:5000/dispositivos").json()
+                conectado = True
+            except:
+                print("Tentando conexão")
+        
 
         if (dispositivos != dados_da_solicitacao):
             # Limpa a lista existente
@@ -43,7 +48,7 @@ def atualizar_lista():
             for dados in dados_da_solicitacao:
                 treeview.insert("", tk.END, values=(dados["id"], f"{dados['temperatura']} °C", "Ligado" if dados["ligado"] else "Desligado"))
             dispositivos = dados_da_solicitacao
-        sleep(1)
+        sleep(0.5)
 
 # Inicializa a janela principal
 root = tk.Tk()
@@ -79,7 +84,7 @@ button2 = ttk.Button(button_frame, text="Pausar")
 button2.pack(side=tk.LEFT, padx=5)
 button3 = ttk.Button(button_frame, text="Continuar")
 button3.pack(side=tk.LEFT, padx=5)
-
+print("Teste")
 # Centraliza os botões horizontalmente no frame
 button_frame.pack_configure(anchor=tk.CENTER)
 tAtualizacao = threading.Thread(target=atualizar_lista)
@@ -87,4 +92,3 @@ tAtualizacao.start()
 # Inicia o loop de eventos
 
 root.mainloop()
-print("Teste")

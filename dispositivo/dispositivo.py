@@ -2,11 +2,12 @@ from random import random
 import threading
 import time
 import socket
+import os
 
 # Mensagens TCP: {Comando: nº do comando, Confirmacao: Bool}
 # Mensagens UDP: {Id: int, Tipo: [temp, status], Dado: [Float, Bool]}
 
-BROKER_IP = "192.168.15.5" # IP do Broker
+BROKER_IP = "192.168.65.3" # IP do Broker
 BROKER_UDP_PORT = 15009
 BROKER_TCP_PORT = 5001
 
@@ -15,10 +16,7 @@ class Dispositivo:
     def __init__(self):
         self.temp = 0
         self.ligado = False
-
-        #Socket para o recebimento de comandos
-        self.sockTCP = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        
+        self.conectado = False
         #Socket para o envio de dados
         self.sockUDP = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
@@ -27,36 +25,53 @@ class Dispositivo:
         self.tParametros = threading.Thread(target=self.definir_parametros)
         self.tEnviar = threading.Thread(target=self.enviar_temperatura)
 
+        self.tLerComandos.start()
         self.tConexao.start()
-        self.tEnviar.start()
         self.tParametros.start()
 
     def conexao(self):
+        #Socket para o recebimento de comandos
+        self.sockTCP = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # Solicita uma conexão com o Broker p/ adicionar o dispositivo na lista de dispositivos
-        print("Conectando")
-        self.sockTCP.connect((BROKER_IP, BROKER_TCP_PORT))
-        self.tLerComandos.start()
+        self.conectado = False
+        while not self.conectado:
+            try:
+                self.sockTCP.connect((BROKER_IP, BROKER_TCP_PORT))
+                self.conectado = True
+            except ConnectionRefusedError:
+                print("Tentando conexão")
 
         
     def receber_comandos(self):
         while True:
-            comando = self.sockTCP.recv(1024)  # buffer size é 1024 bytes
-            if not comando:
-                print("Breakou 1")
-                break
-            print("Comando recebido:", comando.decode())
-            msg = eval(comando.decode())
-            cmd = msg.get('Comando')
-            if cmd == 0:
-                self.ligado = False
-            elif cmd == 1:
-                self.ligado = True
-            elif cmd == 2:
-                self.enviar_temperatura()
-            elif cmd == 3:
-                self.enviar_status()
-            elif cmd == 4:
-                self.id = msg.get('Confirmacao')
+            if (self.conectado):
+                try:
+                    comando = self.sockTCP.recv(1024)  # buffer size é 1024 bytes
+                except ConnectionResetError:
+                    os.system('cls' if os.name == 'nt' else 'clear')
+                    print(f"Tentando conexão com o broker")
+                    self.sockTCP.close()
+                    self.conexao()
+                    continue
+                
+                if not comando:
+                    print("Breakou 1")
+                    break
+                print("Comando recebido:", comando.decode())
+                msg = eval(comando.decode())
+                cmd = msg.get('Comando')
+                if cmd == 0:
+                    self.ligado = False
+                    self.enviar_status()
+                elif cmd == 1:
+                    self.ligado = True
+                    self.enviar_temperatura()
+                elif cmd == 2:
+                    self.enviar_temperatura()
+                elif cmd == 3:
+                    self.enviar_status()
+                elif cmd == 4:
+                    self.id = msg.get('Confirmacao')
 
     def enviar_status(self):
         msg = {'Id': self.id, 'Tipo': 'status', 'Dado': self.ligado}
@@ -72,6 +87,8 @@ class Dispositivo:
 
             self.sockUDP.sendto(msg.encode(), (BROKER_IP, BROKER_UDP_PORT))
             print("Temperatura enviada.")
+        else:
+            self.enviar_status()
 
 
     def definir_parametros(self):
