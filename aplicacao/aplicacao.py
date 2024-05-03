@@ -3,9 +3,13 @@ from tkinter import ttk
 import requests
 import threading
 from time import sleep
+import os
 
 dispositivos = []
-
+#IP_BROKER = os.environ.get("broker_ip")
+IP_BROKER = "localhost"
+print(IP_BROKER)
+URL_PADRAO = "http://" + str(IP_BROKER) + ":5025"
 def on_item_select(event):
     item = treeview.selection()
     if item:
@@ -20,7 +24,7 @@ def ligar_dispositivo():
         treeview.item(item, values=(item_values[0], item_values[1], "Desligando..." if (item_values[2] == 'Ligado') else "Ligando..."))
         idDisp = item_values[0]
         status = item_values[2] == 'Ligado'
-        route = 'http://localhost:5000/dispositivos/' + idDisp
+        route = URL_PADRAO + '/dispositivos/' + idDisp
         corpo = {'id': idDisp, 'ip': '', 'temperatura': '', 'ligado': not status}
         resposta = requests.put(route, json=corpo)
 
@@ -33,9 +37,10 @@ def atualizar_lista():
 
         while not conectado:
             try:
-                dados_da_solicitacao = requests.get("http://localhost:5000/dispositivos").json()
+                dados_da_solicitacao = requests.get(URL_PADRAO + "/dispositivos").json()
                 conectado = True
             except:
+                os.system('cls' if os.name == 'nt' else 'clear')
                 print("Tentando conexão")
         
 

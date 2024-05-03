@@ -5,12 +5,13 @@ import socket
 import os
 
 # Mensagens TCP: {Comando: nº do comando, Confirmacao: Bool}
-# Mensagens UDP: {Id: int, Tipo: [temp, status], Dado: [Float, Bool]}
+# Mensagens UDP: {Id: int, Tipo: [temp, status, conexao], Dado: [Float, Bool, 0]}
 
-BROKER_IP = "192.168.65.3" # IP do Broker
-BROKER_UDP_PORT = 15009
-BROKER_TCP_PORT = 5001
+BROKER_IP = str(os.environ.get("broker_ip")) # IP do Broker
+BROKER_TCP_PORT = 5026
+BROKER_UDP_PORT = 5027
 
+print(BROKER_IP)
 class Dispositivo:
 
     def __init__(self):
@@ -39,6 +40,7 @@ class Dispositivo:
                 self.sockTCP.connect((BROKER_IP, BROKER_TCP_PORT))
                 self.conectado = True
             except ConnectionRefusedError:
+                os.system('cls' if os.name == 'nt' else 'clear')
                 print("Tentando conexão")
 
         

@@ -1,29 +1,20 @@
-''' 
-1. Objetivos - Gerenciamento de dispositivos sensores e atenuadores
-2. URL base - localhost
-3. Endpoints -  localhost/dispositivos (GET)
-                localhost/dispositivos/id (GET)
-                localhost/dispositivos/id (PUT)
-
-
-4. Recursos - Dispositivo'''
-
-# Mensagens TCP: {Comando: nº do comando, Confirmacao: Bool}
-# Mensagens UDP: {Id: int, Tipo: [temp, status, conexao], Dado: [Float, Bool, 0]}
 import socket
 from flask import Flask, jsonify, request
 import threading
 from time import sleep
+
+# Mensagens TCP: {Comando: nº do comando, Confirmacao: Bool}
+# Mensagens UDP: {Id: int, Tipo: [temp, status, conexao], Dado: [Float, Bool, 0]}
 
 app = Flask(__name__)
 
 dispositivos = []
 conexoes = [None, ]
 
-BROKER_IP = "192.168.65.3"
+BROKER_IP = " "
 
-TCP_PORT = 5001         #Porta que o broker vai escutar/enviar mensagens TCP
-UDP_PORT = 15009
+TCP_PORT = 5026         #Porta que o broker vai escutar/enviar mensagens TCP
+UDP_PORT = 5027
 
 ULTIMOID = 1
 
@@ -33,19 +24,21 @@ sockTCP = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # Socket p/ enviar c
 sockUDP = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # Socket p/ receber dados 
 
 def main():
-    try:
-        host_name = socket.gethostname()
-        ip_address = socket.gethostbyname(host_name)
-
-        print(ip_address)
-    except:
-        print("ERROOO ")
-
     sockUDP.bind((BROKER_IP, UDP_PORT)) # Conecta o servidor para escutar transmissões UDP
     sockTCP.bind((BROKER_IP, TCP_PORT)) # Conecta o servidor para enviar transmissões TCP
     tDados.start()
     tConexoes.start()
     
+def atualizar_ip():
+    global BROKER_IP
+    try:
+        host_name = socket.gethostname()
+        ip_address = socket.gethostbyname(host_name)
+        BROKER_IP = ip_address
+        print("Endereço IP do Broker: " + ip_address)
+    except:
+        print("Não foi possível conseguir o IP do Broker")
+
 def esperar_conexao():
     while True:
         sockTCP.listen(1)
@@ -96,6 +89,7 @@ def conectar_novo_dispositivo(endereco, conn):
 
 def enviar_comando(comando, id):
     MAX_TENTATIVAS = 64
+    global SEMAFORO
     for i in range(MAX_TENTATIVAS):
         try:
             msg = {'Comando': comando, 'Confirmacao': id if (comando == 4) else False} #Comando que vai ser enviado, 0 p/ Desligar, 1 p/ Ligar, 2 p/ Temperatura atual e 3 p/ Status
@@ -107,8 +101,8 @@ def enviar_comando(comando, id):
             print(f"Testando conexão com o dispositivo: Tentativa {i}")
     else:
         print(f"O dispositivo de ID: {id} foi desconectado")
-        
         SEMAFORO = True
+
 
 @app.route('/dispositivos', methods=['GET'])
 def obter_dispositivos():
@@ -124,6 +118,7 @@ def obter_dispositivos():
 
     return jsonify(dispositivos)
 
+
 @app.route('/dispositivos/temp/<int:id>', methods=['GET'])
 def obter_dispositivo_temp(id):
     for dispositivo in dispositivos:
@@ -136,6 +131,7 @@ def obter_dispositivo_temp(id):
             print(dispositivo.get('temperatura'))
             return jsonify(dispositivo.get('temperatura'))
 
+
 @app.route('/dispositivos/status/<int:id>', methods=['GET'])
 def obter_dispositivo_status(id):
     for dispositivo in dispositivos:
@@ -147,8 +143,8 @@ def obter_dispositivo_status(id):
 
             return jsonify(dispositivo.get('ligado'))
 
-@app.route('/dispositivos/<int:id>', methods=['PUT'])
 
+@app.route('/dispositivos/<int:id>', methods=['PUT'])
 def editar_dispositivo(id):
     global SEMAFORO
     SEMAFORO = False
@@ -170,5 +166,6 @@ tMain = threading.Thread(target=main)
 tConexoes = threading.Thread(target=esperar_conexao)
 
 if __name__ == '__main__':
+    atualizar_ip()
     tMain.start()
-    app.run(port=5000, host='localhost', debug=False)
+    app.run(port=5025, host=BROKER_IP)
