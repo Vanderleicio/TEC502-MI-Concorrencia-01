@@ -4,15 +4,8 @@
 ------------
 + [Como Executar](#como-executar)
 + [Introdução](#introdução)
-+ [Características da Solução](#características-da-solução)
-+ &nbsp;&nbsp;&nbsp;[Materiais Utilizados](#materiais-utilizados)
-+ &nbsp;&nbsp;&nbsp;[Módulo de Comunicação](#módulo-de-comunicação)
-+ &nbsp;&nbsp;&nbsp;[Módulo FPGA](#módulo-FPGA)
-+ &nbsp;&nbsp;&nbsp;[Módulo DHT11](#módulo-DHT11)
-+ &nbsp;&nbsp;&nbsp;[Sistema em C](#sistema-em-c)
 + [Tabela de Comandos](#tabela-de-comandos)
 + [Testes](#testes)
-+ [Síntese (LEs, LABs e Pinos)](#síntese)
 + [Conclusões](#conclusões)
 + [Referências](#referências)
 
