@@ -44,12 +44,25 @@ def esperar_conexao():
         sockTCP.listen(1)
 
         conn, addr = sockTCP.accept()
-        conectar_novo_dispositivo(addr, conn)
+
+        while True:
+            confirmacao = conn.recv(1024)
+            if not confirmacao:
+                break
+            print('Mensagem recebida do cliente:', confirmacao.decode())
+            confirmacao = eval(confirmacao)
+            if (confirmacao.get('Confirmacao') == None):
+                print(confirmacao.get('Confirmacao'))
+                ja_conectado = False
+            else:
+                ja_conectado = confirmacao.get('Confirmacao')
+            
+            conectar_novo_dispositivo(addr, conn, ja_conectado)
+            break
 
 def ler_dados():
     
     while True:
-        global SEMAFORO
         data, addr = sockUDP.recvfrom(1024)  # buffer size é 1024 bytes
         msg = eval(data.decode())
 
@@ -58,106 +71,94 @@ def ler_dados():
             for dispositivo in dispositivos:
                 if (dispositivo.get('id') == msg.get('Id')):
                     dispositivo['ligado'] = msg['Dado']
-                    SEMAFORO = True
 
         elif (msg.get('Tipo') == 'temp'):
             for dispositivo in dispositivos:
                 if (dispositivo.get('id') == msg.get('Id')):
                     dispositivo['temperatura'] = msg['Dado']
-                    SEMAFORO = True
+                    dispositivo['ligado'] = True
         else:
             print("Tipo não reconhecido")
 
         print("Mensagem recebida:", data.decode())
         print(addr)
 
-def conectar_novo_dispositivo(endereco, conn):
+def conectar_novo_dispositivo(endereco, conn, conexao_antiga):
     global ULTIMOID
 
-    novoDisp = {'id': ULTIMOID,
+    if conexao_antiga: #False se a conexão for nova, ID do dispositivo se for antiga
+        # O "novo" dispositivo já estava cadastrado
+            disp_antigo = {'id': conexao_antiga,
                 'ip': endereco[0],
+                'porta': endereco[1],
                 'temperatura': 0,
                 'ligado': False}
-    
-    dispositivos.append(novoDisp)
-    conexoes.insert(novoDisp.get('id'), conn)
-    print("Novo dispositivo conectado")
-    ULTIMOID += 1
+            conexoes[conexao_antiga] = conn
+            dispositivos.append(disp_antigo)
+    else:
+        
+        # É realmente um dispositivo novo
+        novoDisp = {'id': ULTIMOID,
+                    'ip': endereco[0],
+                    'porta': endereco[1],
+                    'temperatura': 0,
+                    'ligado': False}
+        
+        dispositivos.append(novoDisp)
+        if novoDisp.get('id') < len(conexoes):
+            conexoes[novoDisp.get('id')] = conn
+        else:
+            conexoes.insert(novoDisp.get('id'), conn)
 
-    enviar_comando(4, novoDisp.get('id'))
+        print("Novo dispositivo conectado")
+        ULTIMOID += 1
+
+        enviar_comando(4, novoDisp.get('id'))
 
 
 def enviar_comando(comando, id):
+
     MAX_TENTATIVAS = 64
-    global SEMAFORO
     for i in range(MAX_TENTATIVAS):
         try:
-            msg = {'Comando': comando, 'Confirmacao': id if (comando == 4) else False} #Comando que vai ser enviado, 0 p/ Desligar, 1 p/ Ligar, 2 p/ Temperatura atual e 3 p/ Status
+            msg = {'Comando': comando, 'Confirmacao': id if (comando == 4) else False} #Comando que vai ser enviado, 0 p/ Desligar, 1 p/ Ligar, 2 p/ Temperatura atual, 3 p/ Status e 4 p/ Conexão
             msg = str(msg)
             conexoes[id].sendall(msg.encode())
-            print("Enviando comando para o dispositivo")
+            print(f"Enviando comando para o dispositivo")
+            conexoes[id].settimeout(0.1) # Espera uma resposta de confirmação por 1 segundo
+            confirmacao = conexoes[id].recv(1024)
             break
         except ConnectionResetError:
             print(f"Testando conexão com o dispositivo: Tentativa {i}")
+        except socket.timeout:
+            print("Não houve confirmação do dispositivo a tempo")
     else:
         print(f"O dispositivo de ID: {id} foi desconectado")
-        SEMAFORO = True
+        for index, dispositivo in enumerate(dispositivos):
+            if dispositivo.get('id') == id:
+                del dispositivos[index]
 
 
 @app.route('/dispositivos', methods=['GET'])
 def obter_dispositivos():
-    global SEMAFORO
 
     for dispositivo in dispositivos:
-        SEMAFORO = False
         enviar_comando(2, dispositivo.get('id')) # Solicita a temperatura atual do dispositivo
     
-    while not SEMAFORO:
-                print("Esperando resolver comando")
 
 
     return jsonify(dispositivos)
 
 
-@app.route('/dispositivos/temp/<int:id>', methods=['GET'])
-def obter_dispositivo_temp(id):
-    for dispositivo in dispositivos:
-        if (dispositivo.get('id') == id):
-            comando = 2 # Comando "2" p/ solicitar a temperatura atual do dispositivo
-            enviar_comando(comando, id)
-
-            sleep(0.1)#VER COMO CONSERTAR ISSO!
-
-            print(dispositivo.get('temperatura'))
-            return jsonify(dispositivo.get('temperatura'))
-
-
-@app.route('/dispositivos/status/<int:id>', methods=['GET'])
-def obter_dispositivo_status(id):
-    for dispositivo in dispositivos:
-        if (dispositivo.get('id') == id):
-            comando = 3 #Comando "3" p/ solicitar o status atual do dispositivo
-            enviar_comando(comando, id)
-
-            sleep(0.1) #VER COMO CONSERTAR ISSO!
-
-            return jsonify(dispositivo.get('ligado'))
-
-
 @app.route('/dispositivos/<int:id>', methods=['PUT'])
 def editar_dispositivo(id):
-    global SEMAFORO
-    SEMAFORO = False
     dispositivo_alterado = request.get_json()
     comando = 1 if dispositivo_alterado.get('ligado') else 0 #Comando "1" se for p/ ligar o dispositivo e "0" p/ desligar
 
     for index, dispositivo in enumerate(dispositivos):
 
         if dispositivo.get('id') == id:
-            dispositivos[index]['ligado'] = dispositivo_alterado.get('ligado')
             enviar_comando(comando, id)
-            while not SEMAFORO:
-                print("Esperando resolver comando")
 
             return jsonify(dispositivos[index])
 

@@ -7,9 +7,11 @@ import os
 
 dispositivos = []
 #IP_BROKER = os.environ.get("broker_ip")
-IP_BROKER = "localhost"
+IP_BROKER = "192.168.15.7"
 print(IP_BROKER)
 URL_PADRAO = "http://" + str(IP_BROKER) + ":5025"
+CONECTADO = False
+
 def on_item_select(event):
     item = treeview.selection()
     if item:
@@ -28,72 +30,92 @@ def ligar_dispositivo():
         corpo = {'id': idDisp, 'ip': '', 'temperatura': '', 'ligado': not status}
         resposta = requests.put(route, json=corpo)
 
-        
+def update_status(texto, cor):
+    status_label.config(text=texto, fg=cor)
 
 def atualizar_lista():
-    global dispositivos
+    global dispositivos, CONECTADO
     while True:
-        conectado = False
+        CONECTADO = False
 
-        while not conectado:
+        while not CONECTADO:
             try:
                 dados_da_solicitacao = requests.get(URL_PADRAO + "/dispositivos").json()
-                conectado = True
+                CONECTADO = True
+                os.system('cls' if os.name == 'nt' else 'clear')
+                print("Conectado com o Broker")
+                update_status("Conectado", "green")
             except:
                 os.system('cls' if os.name == 'nt' else 'clear')
                 print("Tentando conexão")
+                update_status("Desconectado", "red")
         
-
+        print(dispositivos)
         if (dispositivos != dados_da_solicitacao):
             # Limpa a lista existente
             for item in treeview.get_children():
                 treeview.delete(item)
 
             # Adiciona os dados da solicitação à Treeview
+            
             for dados in dados_da_solicitacao:
+
                 treeview.insert("", tk.END, values=(dados["id"], f"{dados['temperatura']} °C", "Ligado" if dados["ligado"] else "Desligado"))
+            
             dispositivos = dados_da_solicitacao
         sleep(0.5)
 
-# Inicializa a janela principal
+def inicializacao():
+    # Define os títulos das colunas
+    treeview.heading("#0", text="Índice")
+    treeview.heading("Id", text="Id")
+    treeview.heading("Temperatura", text="Temperatura")
+    treeview.heading("Status", text="Status")
+
+    # Configura o alinhamento do texto das colunas para centralizar
+    for coluna in treeview["columns"]:
+        treeview.column(coluna, anchor="center")
+
+    treeview.bind("<<TreeviewSelect>>", on_item_select)
+
+    # Organiza os elementos da tela
+
+    treeview.pack(padx=10, pady=10)
+
+    status_label.pack(pady=20)
+
+    selected_item_label.pack()
+
+    button_frame.pack(pady=10)
+
+    button1.pack(side=tk.LEFT, padx=5)
+
+    button_frame.pack_configure(anchor=tk.CENTER)
+
+
+def loop_atualizacoes():
+    while True:
+        button1.config(state="normal" if CONECTADO else "disabled")
+
+
 root = tk.Tk()
-root.title("Interface Gráfica")
+root.title("Controle dos sensores")
 
-
-# Cria a Treeview com colunas
+# Cria os elementos da tela
 treeview = ttk.Treeview(root, columns=("Id", "Temperatura", "Status"), show="headings")
-treeview.heading("#0", text="Índice")
-treeview.heading("Id", text="Id")
-treeview.heading("Temperatura", text="Temperatura")
-treeview.heading("Status", text="Status")
-
-# Configura o alinhamento do texto das colunas para centralizar
-for coluna in treeview["columns"]:
-    treeview.column(coluna, anchor="center")
-
-treeview.bind("<<TreeviewSelect>>", on_item_select)
-treeview.pack(padx=10, pady=10)
-
-# Etiqueta para mostrar qual item está selecionado
+status_label = tk.Label(root, text="Desconectado", fg="red", font=("Helvetica", 16))
 selected_item_label = ttk.Label(root, text="Item selecionado: ")
-selected_item_label.pack()
-
-# Cria o frame para os botões
 button_frame = ttk.Frame(root)
-button_frame.pack(pady=10)
-
-# Botões adicionais
 button1 = ttk.Button(button_frame, text="Ligar/Desligar", command=ligar_dispositivo)
-button1.pack(side=tk.LEFT, padx=5)
-button2 = ttk.Button(button_frame, text="Pausar")
-button2.pack(side=tk.LEFT, padx=5)
-button3 = ttk.Button(button_frame, text="Continuar")
-button3.pack(side=tk.LEFT, padx=5)
-print("Teste")
-# Centraliza os botões horizontalmente no frame
-button_frame.pack_configure(anchor=tk.CENTER)
+
+inicializacao()
+
+# Thread para atualização constante da lista de sensores
 tAtualizacao = threading.Thread(target=atualizar_lista)
 tAtualizacao.start()
-# Inicia o loop de eventos
+
+# Thread para atualizações de elementos dinâmicos da tela
+tLoop = threading.Thread(target=loop_atualizacoes)
+tLoop.start()
 
 root.mainloop()

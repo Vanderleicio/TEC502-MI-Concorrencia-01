@@ -7,7 +7,8 @@ import os
 # Mensagens TCP: {Comando: nº do comando, Confirmacao: Bool}
 # Mensagens UDP: {Id: int, Tipo: [temp, status, conexao], Dado: [Float, Bool, 0]}
 
-BROKER_IP = str(os.environ.get("broker_ip")) # IP do Broker
+#BROKER_IP = str(os.environ.get("broker_ip")) # IP do Broker
+BROKER_IP = '192.168.15.7'
 BROKER_TCP_PORT = 5026
 BROKER_UDP_PORT = 5027
 
@@ -18,6 +19,7 @@ class Dispositivo:
         self.temp = 0
         self.ligado = False
         self.conectado = False
+        self.id = None
         #Socket para o envio de dados
         self.sockUDP = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
@@ -31,65 +33,104 @@ class Dispositivo:
         self.tParametros.start()
 
     def conexao(self):
-        #Socket para o recebimento de comandos
+        # Faz a conexão e reconexão com o Broker
+
+        # Socket para o recebimento de comandos
         self.sockTCP = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # Solicita uma conexão com o Broker p/ adicionar o dispositivo na lista de dispositivos
+        
         self.conectado = False
         while not self.conectado:
             try:
+                # Solicita uma conexão com o Broker p/ adicionar o dispositivo na lista de dispositivos
                 self.sockTCP.connect((BROKER_IP, BROKER_TCP_PORT))
                 self.conectado = True
+
+                # Protocolo de iniciação, se None o dispositivo nunca esteve cadastrado no broker
+                msg = {'Comando': 4, 'Confirmacao': self.id} 
+                msg = str(msg)
+                self.sockTCP.sendall(msg.encode())
+
             except ConnectionRefusedError:
                 os.system('cls' if os.name == 'nt' else 'clear')
-                print("Tentando conexão")
-
+                print("Tentando conexão com o Broker")
+            except OSError:
+                os.system('cls' if os.name == 'nt' else 'clear')
+                print("A conexão com o broker foi desligada")
+            
         
     def receber_comandos(self):
         while True:
             if (self.conectado):
+
                 try:
                     comando = self.sockTCP.recv(1024)  # buffer size é 1024 bytes
                 except ConnectionResetError:
                     os.system('cls' if os.name == 'nt' else 'clear')
-                    print(f"Tentando conexão com o broker")
+                    print(f"Conexão com o broker foi desligada")
                     self.sockTCP.close()
                     self.conexao()
                     continue
-                
+                except ConnectionAbortedError:
+                    os.system('cls' if os.name == 'nt' else 'clear')
+                    print("Falha na rede, tentando reconexão com o Broker")
+                    self.sockTCP.close()
+                    self.conexao()
+                    continue
+
                 if not comando:
-                    print("Breakou 1")
-                    break
+                    continue
+
                 print("Comando recebido:", comando.decode())
+                
+                
                 msg = eval(comando.decode())
                 cmd = msg.get('Comando')
+
+                conf = {'Comando': cmd, 'Confirmacao': True}
+                self.sockTCP.sendall(str(conf).encode())
+
                 if cmd == 0:
                     self.ligado = False
                     self.enviar_status()
                 elif cmd == 1:
                     self.ligado = True
+                    self.enviar_status()
                     self.enviar_temperatura()
                 elif cmd == 2:
                     self.enviar_temperatura()
                 elif cmd == 3:
                     self.enviar_status()
                 elif cmd == 4:
+                    self.enviar_status()
+                    self.enviar_temperatura()
                     self.id = msg.get('Confirmacao')
 
     def enviar_status(self):
         msg = {'Id': self.id, 'Tipo': 'status', 'Dado': self.ligado}
         msg = str(msg)
-
-        self.sockUDP.sendto(msg.encode(), (BROKER_IP, BROKER_UDP_PORT))
-        print("Status enviado.")
+        try:
+            self.sockUDP.sendto(msg.encode(), (BROKER_IP, BROKER_UDP_PORT))
+            print("Status enviado.")
+        except OSError:
+            print("A conexão com o broker foi desligada")
+            self.sockTCP.close()
+            self.conexao()
 
     def enviar_temperatura(self):
         if self.ligado:
-            msg = {'Id': self.id, 'Tipo': 'temp', 'Dado': self.temp}
-            msg = str(msg)
+            # Se estiver ligaod envia a temperatura registrada.
+            try:
+                msg = {'Id': self.id, 'Tipo': 'temp', 'Dado': self.temp}
+                msg = str(msg)
 
-            self.sockUDP.sendto(msg.encode(), (BROKER_IP, BROKER_UDP_PORT))
-            print("Temperatura enviada.")
+                self.sockUDP.sendto(msg.encode(), (BROKER_IP, BROKER_UDP_PORT))
+                print("Temperatura enviada.")
+            except OSError:
+                print("A conexão com o broker foi desligada")
+                self.sockTCP.close()
+                self.conexao()
         else:
+            # Se estiver desligado envia o status, e não a temperatura atual
             self.enviar_status()
 
 
@@ -125,29 +166,12 @@ class Dispositivo:
                 print(f"O dispositivo não funcionará pelos próximos {pausa} segundos.")
             elif resp == "3":
                 temp = float(input("Digite a nova temperatura: "))
-                #self.variar_temp(temp)
                 self.temp = temp
                 self.enviar_temperatura()
             else:
                 print("Desligando")
                 self.sockTCP.close()
                 self.sockUDP.close()
-            
-
-    def variar_temp(self, novaTemp):
-        while self.temp != novaTemp:
-            if novaTemp > self.temp:
-                if (self.temp + 0.5) >= novaTemp:
-                    self.temp = novaTemp
-                else:
-                    self.temp += 0.5
-            else:
-                if (self.temp - 0.5) <= novaTemp:
-                    self.temp = novaTemp
-                else:
-                    self.temp -= 0.5
-            print(self.temp)
-            time.sleep(1) 
 
 dispositivo1 = Dispositivo()
 
