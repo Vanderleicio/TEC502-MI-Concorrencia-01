@@ -20,6 +20,7 @@ class Dispositivo:
         self.ligado = False
         self.conectado = False
         self.id = None
+        self.recebe_comandos = True
         #Socket para o envio de dados
         self.sockUDP = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
@@ -38,7 +39,6 @@ class Dispositivo:
         # Socket para o recebimento de comandos
         self.sockTCP = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         
-        self.conectado = False
         while not self.conectado:
             try:
                 # Solicita uma conexão com o Broker p/ adicionar o dispositivo na lista de dispositivos
@@ -52,35 +52,37 @@ class Dispositivo:
 
             except ConnectionRefusedError:
                 os.system('cls' if os.name == 'nt' else 'clear')
-                print("Tentando conexão com o Broker")
+                print("\nTentando conexão com o Broker")
             except OSError:
                 os.system('cls' if os.name == 'nt' else 'clear')
-                print("A conexão com o broker foi desligada")
+                print("\nA conexão com o broker foi desligada")
             
         
     def receber_comandos(self):
-        while True:
+        while self.recebe_comandos:
             if (self.conectado):
 
                 try:
                     comando = self.sockTCP.recv(1024)  # buffer size é 1024 bytes
                 except ConnectionResetError:
                     os.system('cls' if os.name == 'nt' else 'clear')
-                    print(f"Conexão com o broker foi desligada")
+                    print(f"\nConexão com o broker foi desligada")
                     self.sockTCP.close()
+                    self.conectado = False
                     self.conexao()
                     continue
                 except ConnectionAbortedError:
                     os.system('cls' if os.name == 'nt' else 'clear')
-                    print("Falha na rede, tentando reconexão com o Broker")
+                    print("\nFalha na rede, tentando reconexão com o Broker")
                     self.sockTCP.close()
+                    self.conectado = False
                     self.conexao()
                     continue
 
                 if not comando:
                     continue
 
-                print("Comando recebido:", comando.decode())
+                #print("\nComando recebido:", comando.decode())
                 
                 
                 msg = eval(comando.decode())
@@ -110,10 +112,11 @@ class Dispositivo:
         msg = str(msg)
         try:
             self.sockUDP.sendto(msg.encode(), (BROKER_IP, BROKER_UDP_PORT))
-            print("Status enviado.")
+            #print("\nStatus enviado.")
         except OSError:
-            print("A conexão com o broker foi desligada")
+            print("\nA conexão com o broker foi desligada")
             self.sockTCP.close()
+            self.conectado = False
             self.conexao()
 
     def enviar_temperatura(self):
@@ -124,10 +127,11 @@ class Dispositivo:
                 msg = str(msg)
 
                 self.sockUDP.sendto(msg.encode(), (BROKER_IP, BROKER_UDP_PORT))
-                print("Temperatura enviada.")
+                #print("\nTemperatura enviada.")
             except OSError:
-                print("A conexão com o broker foi desligada")
+                print("\nA conexão com o broker foi desligada")
                 self.sockTCP.close()
+                self.conectado = False
                 self.conexao()
         else:
             # Se estiver desligado envia o status, e não a temperatura atual
@@ -137,41 +141,44 @@ class Dispositivo:
     def definir_parametros(self):
         while True:
             print("Escolha qual parâmetro deseja alterar:\n"
-                  "[0] Ligar\n"
-                  "[1] Desligar\n"
-                  "[2] Pausar\n"
+                  "[1] Ligar\n"
+                  "[2] Desligar\n"
                   "[3] Alterar temperatura\n"
                   "[4] Finalizar programa\n")
             resp = input("Digite a opção desejada: ").strip()
-            while (resp not in ["0", "1", "2", "3", "4"]):
+            while (resp not in ["1", "2", "3", "4"]):
                 print("Opção não reconhecida\n")
-                resp = input("Digite a opção desejada: ").strip()
+                resp = input("\nDigite a opção desejada: ").strip()
             
             if resp == "0":
                 if self.ligado:
-                    print("O dispositivo já está ligado.")
+                    print("\nO dispositivo já está ligado.")
                 else:
                     self.ligado = True
-                    print("Alterado o status do dispositivo para ligado.")
+                    print("\nAlterado o status do dispositivo para ligado.")
                 self.enviar_status()
             elif resp == "1":
                 if not self.ligado:
-                    print("O dispositivo já está desligado.")
+                    print("\nO dispositivo já está desligado.")
                 else:
                     self.ligado = False
-                    print("Alterado o status do dispositivo para desligado.")
+                    print("\nAlterado o status do dispositivo para desligado.")
                 self.enviar_status()
             elif resp == "2":
-                pausa = int(input("Digite o tempo em segundos de pausa: "))
-                print(f"O dispositivo não funcionará pelos próximos {pausa} segundos.")
+                pausa = int(input("\nDigite o tempo em segundos de pausa: "))
+                print(f"\nO dispositivo não funcionará pelos próximos {pausa} segundos.")
             elif resp == "3":
-                temp = float(input("Digite a nova temperatura: "))
+                temp = float(input("\nDigite a nova temperatura: "))
                 self.temp = temp
                 self.enviar_temperatura()
             else:
-                print("Desligando")
+                self.recebe_comandos = False
                 self.sockTCP.close()
                 self.sockUDP.close()
+                time.sleep(0.01)
+                os.system('cls' if os.name == 'nt' else 'clear')
+                print("Desligado")
+                break
 
 dispositivo1 = Dispositivo()
 

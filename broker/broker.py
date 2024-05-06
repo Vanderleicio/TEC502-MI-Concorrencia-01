@@ -13,8 +13,8 @@ conexoes = [None, ]
 
 BROKER_IP = " "
 
-TCP_PORT = 5026         #Porta que o broker vai escutar/enviar mensagens TCP
-UDP_PORT = 5027
+TCP_PORT = 5026 # Porta que o broker vai escutar/enviar mensagens TCP
+UDP_PORT = 5027 # Porta que o broker vai escutar/enviar mensagens UDP
 
 ULTIMOID = 1
 
@@ -137,6 +137,7 @@ def enviar_comando(comando, id):
         for index, dispositivo in enumerate(dispositivos):
             if dispositivo.get('id') == id:
                 del dispositivos[index]
+                conexoes[id] = None
 
 
 @app.route('/dispositivos', methods=['GET'])
