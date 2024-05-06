@@ -104,7 +104,7 @@ Já quando se trata da comunicação usual entre os componentes, o Broker perman
 
 Neste componente estão os simuladores dos dispositivos, através dele é possível controlar quais serão os dados emitidos pelos dispositivos conectados ao Broker, bem como ligar/desligar o dispositivo ou encerrá-lo. A [Figura 4](#InterfaceDisp) mostra a interface do dispositivo e as opções disponíveis para o usuário. O dispositivo faz conexão com o Broker via TCP e envia uma mensagem confirmando a tentativa de conexão e informando se ele tem um ID já associado, o que indica se trata-se de uma conexão ou reconexão. Depois de estabelecida a conexão, o dispositivo fica aguardando por comandos, seja via interface própria ou pelo Broker, do qual ele também recebe comando via TCP. Em ambos os casos o dispositivo processa o comando solicitado e envia a temperatura ou seu status de acordo com o que foi solicitado, via UDP para o Broker. Além disso, o dispositivo tem um mecanismo de reconhecimento de desconexão para garantir a confiabilidade do sistema, caso haja algum erro na conexão com o Broker, o dispositivo começa novamente o processo de conexão e não envia dados para o Broker até que a conexão seja refeita.  
 
-![InterfaceDisp](https://github.com/Vanderleicio/TEC502-MI-Concorrencia-01/blob/main/imagesREADME/InterfaceDispositivo.png)
+![InterfaceDisp](https://github.com/Vanderleicio/TEC502-MI-Concorrencia-01/blob/main/imagesREADME/InterfaceDoDispositivo.png)
 - **Figura 4:** *Interface do dispositivo. [Autor]*
 
 ## Conclusão
