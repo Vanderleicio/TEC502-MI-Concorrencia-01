@@ -24,7 +24,7 @@ docker pull vanderleicio/broker:latest
 ### Executando as imagens obtidas:
 Após a obtenção das imagens será necessário executá-las. A primeira imagem a ser executada deve ser o broker, porque ela fornece o IP que será passado para a imagem seguinte:
 ```
-docker run -it --network=host vanderleicio/dispositivo
+docker run -it --network=host vanderleicio/broker
 ```
 Copie o número do IP do Broker e passe como variável de execução da imagem dos Dispositivos (no lugar de {broker_ip}):
 ```
