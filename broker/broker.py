@@ -88,12 +88,17 @@ def conectar_novo_dispositivo(endereco, conn, conexao_antiga):
 
     if conexao_antiga: #False se a conexão for nova, ID do dispositivo se for antiga
         # O "novo" dispositivo já estava cadastrado
-            disp_antigo = {'id': conexao_antiga,
+        disp_antigo = {'id': conexao_antiga,
                 'ip': endereco[0],
                 'porta': endereco[1],
                 'temperatura': 0,
                 'ligado': False}
-            conexoes[conexao_antiga] = conn
+        conexoes[conexao_antiga] = conn
+
+        for dispositivo in dispositivos:
+            if dispositivo.get('id') == conexao_antiga:
+                break
+        else:
             dispositivos.append(disp_antigo)
     else:
         
@@ -117,9 +122,6 @@ def conectar_novo_dispositivo(endereco, conn, conexao_antiga):
 
 
 def enviar_comando(comando, id):
-
-    MAX_TENTATIVAS = 64
-    for i in range(MAX_TENTATIVAS):
         try:
             msg = {'Comando': comando, 'Confirmacao': id if (comando == 4) else False} #Comando que vai ser enviado, 0 p/ Desligar, 1 p/ Ligar, 2 p/ Temperatura atual, 3 p/ Status e 4 p/ Conexão
             msg = str(msg)
@@ -127,17 +129,12 @@ def enviar_comando(comando, id):
             print(f"Enviando comando para o dispositivo")
             conexoes[id].settimeout(0.1) # Espera uma resposta de confirmação por 1 segundo
             confirmacao = conexoes[id].recv(1024)
-            break
-        except ConnectionResetError:
-            print(f"Testando conexão com o dispositivo: Tentativa {i}")
-        except socket.timeout:
-            print("Não houve confirmação do dispositivo a tempo")
-    else:
-        print(f"O dispositivo de ID: {id} foi desconectado")
-        for index, dispositivo in enumerate(dispositivos):
-            if dispositivo.get('id') == id:
-                del dispositivos[index]
-                conexoes[id] = None
+        except:
+            print(f"O dispositivo de ID: {id} foi desconectado")
+            for index, dispositivo in enumerate(dispositivos):
+                if dispositivo.get('id') == id:
+                    del dispositivos[index]
+                    conexoes[id] = None
 
 
 @app.route('/dispositivos', methods=['GET'])
