@@ -34,7 +34,7 @@ docker run -it -e broker_ip={broker_ip} vanderleicio/dispositivo
 ### Executando a aplicação:
 Baixe o arquivo [aplicacao.py]([https://gist.github.com/usuario/linkParaInfoSobreContribuicoes](https://github.com/Vanderleicio/TEC502-MI-Concorrencia-01/blob/main/aplicacao/aplicacao.py)) e o execute com o comando:
 ```
-python aplicacao/aplicacao.py
+python aplicacao/aplicacao.py {ip_do_broker}
 ```
 Pronto, a solução já está executando e funcionando.
 
