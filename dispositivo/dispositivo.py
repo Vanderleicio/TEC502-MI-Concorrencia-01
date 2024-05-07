@@ -7,8 +7,8 @@ import os
 # Mensagens TCP: {Comando: nº do comando, Confirmacao: Bool}
 # Mensagens UDP: {Id: int, Tipo: [temp, status, conexao], Dado: [Float, Bool, 0]}
 
-#BROKER_IP = str(os.environ.get("broker_ip")) # IP do Broker
-BROKER_IP = '192.168.15.7'
+BROKER_IP = str(os.environ.get("broker_ip")) # IP do Broker
+#BROKER_IP = '172.16.103.13'
 BROKER_TCP_PORT = 5026
 BROKER_UDP_PORT = 5027
 
@@ -63,6 +63,7 @@ class Dispositivo:
             if (self.conectado):
 
                 try:
+                    self.sockTCP.settimeout(6.4)
                     comando = self.sockTCP.recv(1024)  # buffer size é 1024 bytes
                 except ConnectionResetError:
                     os.system('cls' if os.name == 'nt' else 'clear')
@@ -72,6 +73,13 @@ class Dispositivo:
                     self.conexao()
                     continue
                 except ConnectionAbortedError:
+                    os.system('cls' if os.name == 'nt' else 'clear')
+                    print("\nFalha na rede, tentando reconexão com o Broker")
+                    self.sockTCP.close()
+                    self.conectado = False
+                    self.conexao()
+                    continue
+                except socket.timeout:
                     os.system('cls' if os.name == 'nt' else 'clear')
                     print("\nFalha na rede, tentando reconexão com o Broker")
                     self.sockTCP.close()
@@ -140,6 +148,7 @@ class Dispositivo:
 
     def definir_parametros(self):
         while True:
+            os.system('cls' if os.name == 'nt' else 'clear')
             print("Escolha qual parâmetro deseja alterar:\n"
                   "[1] Ligar\n"
                   "[2] Desligar\n"
@@ -150,23 +159,20 @@ class Dispositivo:
                 print("Opção não reconhecida\n")
                 resp = input("\nDigite a opção desejada: ").strip()
             
-            if resp == "0":
+            if resp == "1":
                 if self.ligado:
                     print("\nO dispositivo já está ligado.")
                 else:
                     self.ligado = True
                     print("\nAlterado o status do dispositivo para ligado.")
                 self.enviar_status()
-            elif resp == "1":
+            elif resp == "2":
                 if not self.ligado:
                     print("\nO dispositivo já está desligado.")
                 else:
                     self.ligado = False
                     print("\nAlterado o status do dispositivo para desligado.")
                 self.enviar_status()
-            elif resp == "2":
-                pausa = int(input("\nDigite o tempo em segundos de pausa: "))
-                print(f"\nO dispositivo não funcionará pelos próximos {pausa} segundos.")
             elif resp == "3":
                 temp = float(input("\nDigite a nova temperatura: "))
                 self.temp = temp
