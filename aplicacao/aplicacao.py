@@ -4,10 +4,11 @@ import requests
 import threading
 from time import sleep
 import os
+import sys
 
 dispositivos = []
-#IP_BROKER = os.environ.get("broker_ip")
-IP_BROKER = "192.168.15.7"
+IP_BROKER = str(sys.argv[1])
+#IP_BROKER = "172.16.103.13"
 print(IP_BROKER)
 URL_PADRAO = "http://" + str(IP_BROKER) + ":5025"
 CONECTADO = False
@@ -36,19 +37,19 @@ def update_status(texto, cor):
 def atualizar_lista():
     global dispositivos, CONECTADO
     while True:
-        CONECTADO = False
 
-        while not CONECTADO:
+        while True:
             try:
-                dados_da_solicitacao = requests.get(URL_PADRAO + "/dispositivos").json()
+                dados_da_solicitacao = requests.get(URL_PADRAO + "/dispositivos", timeout=3).json()
                 CONECTADO = True
                 os.system('cls' if os.name == 'nt' else 'clear')
                 print("Conectado com o Broker")
                 update_status("Conectado", "green")
+                break
             except:
+                CONECTADO = False
                 os.system('cls' if os.name == 'nt' else 'clear')
                 print("Tentando conexão")
-                update_status("Desconectado", "red")
         
         print(dispositivos)
         if (dispositivos != dados_da_solicitacao):
@@ -96,6 +97,7 @@ def inicializacao():
 def loop_atualizacoes():
     while True:
         button1.config(state="normal" if CONECTADO else "disabled")
+        update_status(("Conectado" if CONECTADO else "Desconectado"), ("green" if CONECTADO else "red"))
 
 
 root = tk.Tk()
